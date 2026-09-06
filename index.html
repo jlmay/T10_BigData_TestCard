@@ -291,6 +291,17 @@
         <button id="btnClearLog" data-page-node-id="lDPQ0dlEYfUYwiyDKngV1I">清空日志</button>
         <button id="btnSaveLog" data-page-node-id="8dCjH86tVCUnHknBTU1nFF">导出日志</button>
       </div>
+      <div class="batch" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px;">
+        <div class="row" style="margin:0 0 10px;">
+          <label style="width:auto;">批量发卡张数</label>
+          <input type="number" id="batchCount" value="10" min="1" max="9999" style="width:80px;">
+          <button id="btnBatch" class="primary">批量发卡</button>
+        </div>
+        <div class="row" style="margin:0 0 8px;">
+          <label class="chk" style="width:auto;"><input type="checkbox" id="optBatchContinue"> 失败继续（坏卡跳过不停）</label>
+        </div>
+        <div class="mini" id="batchProgress">尚未开始批量发卡。点「批量发卡」后，将自动等待放卡 → 发卡 → 等取卡，循环至设定张数。</div>
+      </div>
       <div class="stat" style="margin-top:10px;" data-page-node-id="icLIXIkyGNMXDdBNciBNVk">
         <div data-page-node-id="cwn1kQH8daU8XtYb8gfzDL"><div class="n tot" id="stTotal" data-page-node-id="VZdxT8pzMF8iWsa8itHVgP">0</div><div class="t" data-page-node-id="i88Chyr1lBfHPSNFvUYVAp">总计</div></div>
         <div data-page-node-id="6BO7jWcHpR8ndyAkQNEGJ8"><div class="n ok"  id="stOk" data-page-node-id="TINwX9DIhgfxSMlGHEtPzK">0</div><div class="t" data-page-node-id="FOWX10zDRinqKjKH1s8KYD">成功</div></div>
@@ -1052,6 +1063,67 @@ async function runIssueContact() {
   }
 }
 
+/* ---------- 批量发卡：按设定张数连续发，失败可配置继续 ---------- */
+async function runBatch() {
+  if (handle === null) { log('请先打开端口。', 'w'); if (!await openDevice()) return; }
+  if (running) return;
+  const n = parseInt($('batchCount').value, 10);
+  if (!Number.isInteger(n) || n < 1 || n > 9999) { log('批量张数无效，请填 1~9999 的整数。', 'e'); return; }
+  const cont = $('optBatchContinue').checked;
+  const ct = currentMode() === 'ct';
+  running = true; stopReq = false;
+  $('btnRun').disabled = true; $('btnStop').disabled = false; $('btnBatch').disabled = true;
+  $('btnOpen').disabled = true; $('btnClose').disabled = true;
+  let done = 0, failed = 0;
+  const setProg = () => { $('batchProgress').textContent = '批量进度：' + done + ' 成功 / ' + failed + ' 失败 / 共 ' + n + ' 张'; };
+  setProg();
+  log('开始批量发卡：共 ' + n + ' 张，模式=' + (ct ? '接触式' : '非接触式') + (cont ? '，失败继续' : '，失败即停'), 'h');
+  try {
+    for (let i = 1; i <= n; i++) {
+      if (stopReq) { log('已收到停止请求，批量发卡提前结束。', 'w'); break; }
+      /* 等待卡片：第 1 张等放卡(60s 超时)，其后先等取卡再等放卡 */
+      if (i === 1) {
+        setState('批量发卡中…（第 ' + i + '/' + n + ' 张，请放卡）');
+        log('请将第 1 张卡片放到读卡器上…', 'w');
+        if (!await waitCard(true, 60000)) { log('等待放卡超时（60s），批量发卡结束。', 'e'); break; }
+      } else {
+        setState('请取走第 ' + (i - 1) + ' 张，放置第 ' + i + ' 张…');
+        log('请取走已发卡，并放置第 ' + i + ' 张卡片…', 'w');
+        await waitCard(false);
+        if (stopReq) break;
+        if (!await waitCard(true)) { log('等待放卡超时，批量发卡结束。', 'e'); break; }
+      }
+      stat.total++; updateStat();
+      if (ct) resetSteps(FLOW2); else resetSteps();
+      setState('批量发卡中…（第 ' + i + '/' + n + ' 张）');
+      let ok = false, snr = '-';
+      try {
+        if (ct) await issueOneContact(); else snr = await issueOne();
+        ok = true;
+      } catch (e) { log('第 ' + i + ' 张发卡失败：' + (e.message || e), 'e'); }
+      if (ok) {
+        done++; stat.ok++;
+        log('★ 第 ' + i + ' 张发卡成功' + (ct ? '' : '  卡号 ' + (snr || '-')), 'o');
+        if (!ct) $('lastCard').textContent = '最近成功：' + (snr || '-');
+        await beep(80);
+      } else {
+        failed++; stat.fail++;
+        await beep(400);
+        if (!cont) { log('批量发卡因失败中止（取消勾选「失败继续」）。已完成 ' + done + ' 张。', 'e'); break; }
+        else log('（失败继续）跳过此卡，继续下一张。', 'w');
+      }
+      updateStat(); setProg();
+    }
+    setState('空闲');
+    log('批量发卡结束：成功 ' + done + ' 张，失败 ' + failed + ' 张，共 ' + n + ' 张。', done >= n ? 'o' : 'w');
+    $('batchProgress').textContent = '上次批量：成功 ' + done + ' / 失败 ' + failed + ' / 共 ' + n + ' 张';
+  } finally {
+    running = false; stopReq = false;
+    $('btnRun').disabled = false; $('btnStop').disabled = true; $('btnBatch').disabled = false;
+    $('btnOpen').disabled = false; $('btnClose').disabled = false;
+  }
+}
+$('btnBatch').addEventListener('click', runBatch);
 $('btnRun').addEventListener('click', () => {
   if (currentMode() === 'ct') runIssueContact(); else runIssue();
 });
