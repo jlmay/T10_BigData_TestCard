@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="tnwCBsBIyrk3f1XIXJGNRZ">
+<head data-page-node-id="QYak3Yn6fgRFXGQGrx13K7">
+<meta charset="UTF-8" data-page-node-id="6MZ4hcymCbC1WW5ROERx9w">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="gMvH7E1wdDo382wtTVETmg">
+<title>D8 大数据测试卡 发卡工具</title>
+<style>
+  :root {
+    --bg: #12151c;
+    --panel: #1a1f2b;
+    --panel2: #151a24;
+    --border: #2a3140;
+    --text: #d8dee9;
+    --muted: #8b95a7;
+    --accent: #4da3ff;
+    --ok: #3ddc97;
+    --err: #ff5c5c;
+    --warn: #ffb454;
+    --mono: Consolas, "SF Mono", Menlo, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    font-size: 13px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    background: linear-gradient(90deg, #182031, #12151c);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .5px; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.off { background: var(--err); box-shadow: 0 0 8px var(--err); }
+
+  .wrap {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    height: calc(100vh - 46px);
+    align-items: stretch;
+  }
+  .left { width: 400px; min-width: 360px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .right { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .card > h2 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: .5px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+  .row label { width: 92px; color: var(--muted); flex: none; font-size: 12px; }
+
+  input[type=text], input[type=number], select, textarea {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: var(--mono);
+    outline: none;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input:disabled, select:disabled { opacity: .45; }
+
+  .seg { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+  .seg label {
+    flex: 1; text-align: center; padding: 6px 0; cursor: pointer;
+    background: var(--panel2); color: var(--muted); font-size: 12px; user-select: none;
+    border-right: 1px solid var(--border);
+  }
+  .seg label:last-child { border-right: none; }
+  .seg input { display: none; }
+  .seg input:checked + span { color: #fff; }
+  .seg label.on { background: var(--accent); border-color: var(--accent); }
+  .seg label.on span { color: #fff; }
+
+  button {
+    background: #243044;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: background .12s;
+  }
+  button:hover:not(:disabled) { background: #2d3b53; border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #06121f; font-weight: bold; }
+  button.primary:hover:not(:disabled) { background: #6fb4ff; }
+  button.danger { background: #3a2027; border-color: #5c2b33; color: #ff9b9b; }
+  button.danger:hover:not(:disabled) { background: #4d2a33; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .stat { display: flex; gap: 8px; }
+  .stat div {
+    flex: 1; background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 4px; text-align: center;
+  }
+  .stat .n { font-size: 19px; font-family: var(--mono); font-weight: bold; }
+  .stat .t { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .n.ok { color: var(--ok); } .n.err { color: var(--err); } .n.tot { color: var(--accent); }
+
+  table.steps { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.steps th {
+    text-align: left; color: var(--muted); font-weight: normal; font-size: 11px;
+    padding: 4px 6px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  table.steps td { padding: 3px 6px; border-bottom: 1px solid #202634; vertical-align: middle; }
+  table.steps tr:hover td { background: #1e2432; }
+  table.steps .idx { color: var(--muted); width: 24px; font-family: var(--mono); }
+  table.steps .nm { white-space: nowrap; width: 150px; }
+  table.steps input { font-size: 11px; padding: 3px 6px; }
+  table.steps .rt { font-family: var(--mono); font-size: 11px; color: var(--muted); word-break: break-all; }
+  .st { width: 20px; text-align: center; font-family: var(--mono); font-weight: bold; }
+  .st.idle { color: #4a5568; }
+  .st.run  { color: var(--warn); }
+  .st.ok   { color: var(--ok); }
+  .st.err  { color: var(--err); }
+  .st.skip { color: var(--muted); }
+
+  #log {
+    flex: 1;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 120px;
+  }
+  #log .t { color: #4a5568; }
+  #log .i { color: var(--text); }
+  #log .o { color: var(--ok); }
+  #log .e { color: var(--err); }
+  #log .w { color: var(--warn); }
+  #log .h { color: var(--accent); }
+
+  .statusbar {
+    padding: 5px 10px; border-radius: 5px; background: var(--panel2);
+    border: 1px solid var(--border); font-size: 12px; color: var(--muted);
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .statusbar b { color: var(--text); font-weight: normal; }
+  .chk { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; cursor: pointer; }
+  .chk input { accent-color: var(--accent); }
+  .flex1 { flex: 1; }
+  .sep { height: 1px; background: var(--border); margin: 10px 0; }
+  .mini { font-size: 11px; color: #5a6478; line-height: 1.5; }
+</style>
+</head>
+<body data-page-node-id="1Ze4Oi86fwRBHqcba050wF">
+<header data-page-node-id="NZqWgLJJhNhlAyCAXurMHX">
+  <h1 data-page-node-id="BmCDcvbZRGHCpkF6q3uy1s">D8 大数据测试卡 发卡工具</h1>
+  <span class="sub" data-page-node-id="OOvG1N71crebGTclOH2vpV">dcrf32 · WebSocket 本地服务</span>
+  <div class="flex1" data-page-node-id="g9lcVq4DvBdTMBINR5wLSy"></div>
+  <span class="dot" id="dot" data-page-node-id="lMigYaGLXFi4WnEyFilX1e"></span>
+  <span class="sub" id="connState" data-page-node-id="5Alzii1XxOXUwDjuJreilO">未连接</span>
+</header>
+
+<div class="wrap" data-page-node-id="9hRbDRv93EIHkvUkjmwAFF">
+  <!-- ============ 左栏 ============ -->
+  <div class="left" data-page-node-id="tae3sXcnbF1i0YEYEWmGop">
+    <div class="card" data-page-node-id="GvqfTRzZHdbCdcBoqytRkr">
+      <h2 data-page-node-id="hFUiE8HBmS6Pvj8XZWcwNh">设备连接</h2>
+      <div class="seg" style="margin-bottom:10px;" data-page-node-id="6JJxBIRnOSX5lUzm6dzX5v">
+        <label data-page-node-id="oRGYITa3rYZDzXis3FCC6u"><input type="radio" name="conn" value="usb" checked data-page-node-id="lacg3OzDHv2gSkX1KCgDyy"><span data-page-node-id="xqqvsKCgMy8dc2zMjfbKta">USB 设备</span></label>
+        <label data-page-node-id="0fHZxUMYpBFHFiBSCyI0rq"><input type="radio" name="conn" value="serial" data-page-node-id="INZ2upLkIzQnI4ChP6lEDq"><span data-page-node-id="6xYXbz8dxaaL1HWJewkXaE">串口设备</span></label>
+      </div>
+
+      <div id="usbCfg" data-page-node-id="IyRoYlA5wSDhQ2flVHvRJN">
+        <div class="row" data-page-node-id="VYHmtTAz4Vt1qz4oToagdz">
+          <label data-page-node-id="5kfDH7t3BnVUyBwZRS756m">设备号</label>
+          <input type="number" id="usbPort" value="100" min="0" title="USB 设备号。test_dcrf32.html 用 100 可正常打开；若不确定请点「扫描设备」" data-page-node-id="b0X6sGenoLJFjINRlnaAbo">
+          <button id="btnScanUsb" style="flex:none;padding:5px 8px;" data-page-node-id="GI81dLrWsI8tBQpOljEeRZ">扫描</button>
+        </div>
+        <div class="row" data-page-node-id="h4QOCMKPakYOL5jnS17mbo">
+          <label data-page-node-id="h4xlqcnleoziU6zp1bLlu3">波特率</label>
+          <select id="usbBaud" data-page-node-id="RrgZXIAinBvH2x4i6HsXpt">
+            <option value="9600" data-page-node-id="GZks7rX9rNX3Hi8TREhF9m">9600</option>
+            <option value="19200" data-page-node-id="FKlJkuCZHYeJbA4e6f99FD">19200</option>
+            <option value="38400" data-page-node-id="FDa1mtWzYsK9zdRsSbOoSw">38400</option>
+            <option value="57600" data-page-node-id="CWYWfZYkPPMurQI895htGe">57600</option>
+            <option value="115200" selected data-page-node-id="emZqzBxSQjWy65y6JTPp5Q">115200</option>
+          </select>
+        </div>
+        <div class="row" data-page-node-id="NihgSVylWFCCAN5JYuHqZb">
+          <label data-page-node-id="H7urH55dnP6qxRC5fonXb1">设备名(可选)</label>
+          <input type="text" id="usbName" placeholder="留空则按设备号打开" data-page-node-id="Slmr329TX6Yhp514cNULuY">
+        </div>
+      </div>
+
+      <div id="serCfg" style="display:none;" data-page-node-id="YIKDBaxE4fPGUDsbJ8OI7p">
+        <div class="row" data-page-node-id="dSAx8zFGGJoxnhcEynt2aH">
+          <label data-page-node-id="IOqQnwFCSH9hLvt1gWaJG3">串口号</label>
+          <select id="comPort" data-page-node-id="zepv4zCb7eq7Bfo8zp9BsZ"></select>
+          <button id="btnScanCom" style="flex:none;padding:5px 8px;" data-page-node-id="L0MdJPQMzLLBloLtj48xLU">扫描</button>
+        </div>
+        <div class="row" data-page-node-id="9cNq3pTKkh9pbBdfcOAW2z">
+          <label data-page-node-id="zZ48cV4kSmq7OrlZavgjxA">波特率</label>
+          <select id="comBaud" data-page-node-id="C69I7NoosJJqYlcfKSZtwm">
+            <option value="9600" data-page-node-id="PjtGYF4ZRtu0K8eEbX6hMB">9600</option>
+            <option value="19200" data-page-node-id="Jw2YXj6ClRWZbSTEQxjDKd">19200</option>
+            <option value="38400" data-page-node-id="LHxIc9Sfn0iUF32T5cUAcS">38400</option>
+            <option value="57600" data-page-node-id="5OSyTti0DACLLN6khxErGG">57600</option>
+            <option value="115200" selected data-page-node-id="dNr96VEiVq7LVFZIiF1g1E">115200</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btns" style="margin-top:10px;" data-page-node-id="YZxRaBGO6HACr9cH0f2RmF">
+        <button id="btnOpen" class="primary" data-page-node-id="Qsco50We0AOBC9FbWHhtiY">打开端口</button>
+        <button id="btnClose" data-page-node-id="6gIHNkx9M8a0AcM57Q7Iru">关闭端口</button>
+        <button id="btnScan" data-page-node-id="eDeDsFwSA0f1lTk3ymkFff">扫描设备</button>
+        <button id="btnBeep" data-page-node-id="Am9rxHPSPdpqXBb9zOyRKf">蜂鸣</button>
+      </div>
+      <div class="sep" data-page-node-id="tRxTsdvq4r7ajacBmhJRd0"></div>
+      <div class="row" data-page-node-id="w1nKCD4qZJnmvsHeioBbcC">
+        <label data-page-node-id="Mti1M76Ts6nVaIo5HhMKLx">服务地址</label>
+        <input type="text" id="wsUrl" value="ws://127.0.0.1:50150" spellcheck="false" data-page-node-id="q7I9HwFEgVradcs9O7Hf68">
+      </div>
+      <div class="row" data-page-node-id="BHfxqvExvUf3QIggRW3hiB">
+        <label class="chk" style="width:auto;" data-page-node-id="Y97ts67ASuD06St9zYbGH4">
+          <input type="checkbox" id="optAutoScan" checked data-page-node-id="90cw56R1xwAdYSjYGL6IGf"> 打开失败时自动扫描设备号
+        </label>
+      </div>
+      <div class="mini" style="margin-top:6px;" data-page-node-id="VbSm4z5FrVzBmoW56h65pO">需先启动 <span style="font-family:var(--mono)" data-page-node-id="lG8FIMR7QkVDJ7LnYjF9Ls">dcrf32servicetest.exe</span>。本机探测：端口 <span style="font-family:var(--mono)" data-page-node-id="nMz3AISUZ85t9bKNx5J6r7">50150</span> 已在监听，设备号 <span style="font-family:var(--mono)" data-page-node-id="AlzrfwvKygX8UlAeaNpLZq">0</span> 可用。</div>
+    </div>
+
+    <div class="card" id="paramCard" data-page-node-id="Vi5zi2EE9vZH8ofphWwupS">
+      <h2 data-page-node-id="KyBQRwD5dOmJtuFtA1Rx9R">发卡参数</h2>
+      <div class="row" data-page-node-id="FwquAMSPoAUZ8tfojDQ4lH">
+        <label data-page-node-id="hGAE6oN5eYTHaz8Q5zWyw0">认证密钥</label>
+        <input type="text" id="authKey" value="FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" maxlength="48" data-page-node-id="F3Q6XjUsJeGITOKq4vLIVq">
+      </div>
+      <div class="row" data-page-node-id="QiRx5q7HxmD18MtsiSTed7">
+        <label data-page-node-id="dDe3qWIEpPN0UKf6KkDDxS">密钥标识</label>
+        <input type="text" id="keyId" value="00" maxlength="2" style="width:60px;" title="外部认证密钥标识，用于 APDU 的 P2" data-page-node-id="pSaZNxFZyRofMj9Cid62iB">
+      </div>
+      <div class="row" data-page-node-id="m1vHsKLaNgoCQoijgPHIzx">
+        <label data-page-node-id="IWMuGlCyMuAfGfBLGR3AR8">算法</label>
+        <select id="alg" data-page-node-id="fJlBvn1KCiMNpKksOkTVFd">
+          <option value="3des16" selected data-page-node-id="K1KywK3Eg0OeVussh8RQVq">3DES (16字节密钥 K1K2K3=K1)</option>
+          <option value="3des24" data-page-node-id="tnhxJ6DiCGzuQzDTXJCFG5">3DES (24字节密钥)</option>
+          <option value="des" data-page-node-id="FAr36GbCYIl4OT4AJO1uDC">单 DES (取前8字节)</option>
+        </select>
+      </div>
+      <div class="sep" data-page-node-id="WFuOPPTC62b00MeonhvFnK"></div>
+      <div class="row" data-page-node-id="um5BawEG7qdTwNOi8sOtw4">
+        <label class="chk" style="width:auto;" data-page-node-id="0gz1mP6izw6uryGSxzFt3X"><input type="checkbox" id="optSetCardType" checked data-page-node-id="zCSsbPvY0fqYoccEKtHbCV"> 发卡前设置卡型(A)</label>
+        <label class="chk" style="width:auto;" data-page-node-id="ZCWkB7Kh2C04WsCIyS7j82"><input type="checkbox" id="optBeep" checked data-page-node-id="kH9ZIK6XNVtU9rmB0DHGKI"> 声音提示</label>
+      </div>
+      <div class="row" data-page-node-id="feu3sGlDjNERDAEhk0pnmO">
+        <label class="chk" style="width:auto;" data-page-node-id="FoOSfuj6rBWO7WXTpheuAZ"><input type="checkbox" id="optLoop" data-page-node-id="2uMbT3pKJ3n1GTqry0wqBi"> 循环发卡（连续发卡模式）</label>
+      </div>
+      <div class="row" data-page-node-id="GTgaWMbrYJD5fWrNo6JfNl">
+        <label class="chk" style="width:auto;" data-page-node-id="G2rv23wY3C29dNWlZJCp4t"><input type="checkbox" id="optVerify" data-page-node-id="hsLJzfBez8hywmfIDWxp1t"> 发卡后校验（读文件 0002 前16字节）</label>
+      </div>
+    </div>
+
+    <div class="card" data-page-node-id="DPo5JGsw69S29llBvKlA6Q">
+      <h2 data-page-node-id="m5n04yiS9TTHo8J2V3hwRT">执行</h2>
+      <div class="btns" data-page-node-id="mh2Guf6WSSsy5KMLsOeQBN">
+        <button id="btnRun" class="primary" data-page-node-id="DEmFLY3VDucJco4QmzonS1">开始发卡</button>
+        <button id="btnStop" class="danger" disabled data-page-node-id="M1ytJBz6NCx1FCxd3sYKMr">停止</button>
+        <button id="btnClearLog" data-page-node-id="lDPQ0dlEYfUYwiyDKngV1I">清空日志</button>
+        <button id="btnSaveLog" data-page-node-id="8dCjH86tVCUnHknBTU1nFF">导出日志</button>
+      </div>
+      <div class="stat" style="margin-top:10px;" data-page-node-id="icLIXIkyGNMXDdBNciBNVk">
+        <div data-page-node-id="cwn1kQH8daU8XtYb8gfzDL"><div class="n tot" id="stTotal" data-page-node-id="VZdxT8pzMF8iWsa8itHVgP">0</div><div class="t" data-page-node-id="i88Chyr1lBfHPSNFvUYVAp">总计</div></div>
+        <div data-page-node-id="6BO7jWcHpR8ndyAkQNEGJ8"><div class="n ok"  id="stOk" data-page-node-id="TINwX9DIhgfxSMlGHEtPzK">0</div><div class="t" data-page-node-id="FOWX10zDRinqKjKH1s8KYD">成功</div></div>
+        <div data-page-node-id="LbQIECkDDNvbhPYBr5Rucv"><div class="n err" id="stFail" data-page-node-id="murOvN6KvhXu3SW6uHYosb">0</div><div class="t" data-page-node-id="KVk9IkBZ2ZriqJLBKPxqVQ">失败</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 右栏 ============ -->
+  <div class="right" data-page-node-id="RLKrbXEsUO3CiwAAjaAPDB">
+    <!-- 发卡模式选择：非接触式 / 接触式 -->
+    <div class="card" style="flex:none;padding:10px 14px;" data-page-node-id="u7ZL9Ynlw8EGxbuFr59ktE">
+      <div style="display:flex;align-items:center;gap:12px;" data-page-node-id="eSruVBm6NhdlfBBSnnofOV">
+        <span style="color:var(--muted);font-size:12px;flex:none;" data-page-node-id="Cz4Uk8JjT9evE6ABUWt1H1">发卡模式</span>
+        <div class="seg" id="modeSeg" style="flex:1;max-width:480px;" data-page-node-id="rsJwxHm1GYLtkXDX5TtzMh">
+          <label data-page-node-id="m5OKiEFp9X1XCAK9gfsHZy"><input type="radio" name="mode" value="cl" checked data-page-node-id="O7vj2ibUY76pxmwHCd8C28"><span data-page-node-id="dwlFRoHEXW57bha445X2mx">非接触式 大数据测试卡</span></label>
+          <label data-page-node-id="M9DRqKgieIxyyLlug0kfV7"><input type="radio" name="mode" value="ct" data-page-node-id="Fn1NPlzWbxrLxBOkLIKpFT"><span data-page-node-id="YuGmXmCqcLXD5K9Gqkj2YP">接触式 大数据测试卡</span></label>
+        </div>
+      </div>
+      <div class="mini" style="margin-top:6px;" data-page-node-id="F8wWKS2Q7pVEIJZGZqplVZ">选择后只显示对应流程；左栏「开始发卡 / 停止」按当前模式执行。</div>
+    </div>
+
+    <!-- 非接触式 -->
+    <div class="card" style="flex:none;" id="flowCardCl" data-page-node-id="rJs0eJL8mztquuRas26jAk">
+      <h2 data-page-node-id="NJ8IELFCMvCYPlTyAjd2xo">非接触式发卡流程 <span style="color:var(--muted);font-weight:normal;font-size:11px;" data-page-node-id="pKc7nWtlULy3kYsD8jP8is">（指令列可直接修改）</span></h2>
+      <div style="overflow-x:auto;" data-page-node-id="Y4OQssX4bwwB7E6YPntCdr">
+        <table class="steps" data-page-node-id="5x3aHW4qPG1mY3cROnLvBP">
+          <thead data-page-node-id="WV0QxGuTin6aFzh5po0np5">
+            <tr data-page-node-id="izUE9iryR8Dqa8QPacrwyv"><th data-page-node-id="eHQzyx392LeWkjUErgnzqP"></th><th data-page-node-id="EtOktnmn6CmABJveMBR8vo">#</th><th data-page-node-id="NuQ441D8U85nfnpBgoK9gj">步骤</th><th data-page-node-id="RNrYRCTJSNFmuH5DBFqdAW">指令 / 参数</th><th data-page-node-id="uWfjfgLiwRhUgX5jEBGoS7">返回</th></tr>
+          </thead>
+          <tbody id="stepBody" data-page-node-id="Fvq7x9dgtxk1wvfJrFAWjM"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ 接触式大数据测试卡发卡（与非接触式是不同功能，独立流程） ============ -->
+    <div class="card" style="flex:none;display:none;" id="flowCardCt" data-page-node-id="iauLDkl3owvU5SEb04iPqj">
+      <h2 data-page-node-id="2FRmpRcnBFaBZF2bBK59Gb">接触式发卡流程 <span style="color:var(--muted);font-weight:normal;font-size:11px;" data-page-node-id="2UyYDltb6yP1f3AmfQz16e">（命令列可直接修改；步骤3失败也继续）</span></h2>
+      <div style="overflow-x:auto;" data-page-node-id="6LMOtl0tU7SCaPTdcnc83k">
+        <table class="steps" data-page-node-id="DsYTDxAA0nqqFAs14MvGTk">
+          <thead data-page-node-id="RpxWPly5ItAlwMWqu7GrBp">
+            <tr data-page-node-id="ePWIrYPU9vvmqF5lth9Ekl"><th data-page-node-id="V05skLvKpc2UYd39dUxh2p"></th><th data-page-node-id="rSeC7mlGuRcDJsQVhchVnt">#</th><th data-page-node-id="ELKbsfCuKaSDQDNZvcu5Ae">步骤</th><th data-page-node-id="GVwkj5kMvU8rw9XmcM7QVM">指令 / 参数</th><th data-page-node-id="GCDvesXUhkGwkXif1GI99H">返回</th></tr>
+          </thead>
+          <tbody id="stepBody2" data-page-node-id="SR5ArSHeuRZfDSzMLqYzTF"></tbody>
+        </table>
+      </div>
+      <div class="mini" style="margin-top:8px;" data-page-node-id="J46QNDMHRLK1I4FsruGztq">需先放好接触式卡并「打开端口」。步骤3即使命令返回异常也继续。点左栏「开始发卡」即开始接触式发卡。</div>
+    </div>
+
+    <div class="statusbar" data-page-node-id="Au2m3j5p6Bdr1eHqBY48v0">
+      <span data-page-node-id="BBvRH6n3Rr2BUjV3zMXgsD">状态：<b id="runState" data-page-node-id="vAf0cDlI7X9B37bK0RjQgc">空闲</b></span>
+      <span id="lastCard" style="font-family:var(--mono);" data-page-node-id="C87Q3vwwIX5CSrQI9mU57c"></span>
+    </div>
+
+    <div id="log" data-page-node-id="ypyFLD6kNtmfMFvppIZCv3"></div>
+  </div>
+</div>
+
+<script src="dcrf32_client.js"></script>
+<script>
+/* ============================================================
+ *  DES / 3DES (ECB, 单块 8 字节)  纯 JS 实现，无外部依赖
+ * ============================================================ */
+const DES = (function () {
+  const IP = [58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,
+              57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7];
+  const FP = [40,8,48,16,56,24,64,32,39,7,47,15,55,23,63,31,38,6,46,14,54,22,62,30,37,5,45,13,53,21,61,29,
+              36,4,44,12,52,20,60,28,35,3,43,11,51,19,59,27,34,2,42,10,50,18,58,26,33,1,41,9,49,17,57,25];
+  const E  = [32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,
+              24,25,26,27,28,29,28,29,30,31,32,1];
+  const P  = [16,7,20,21,29,12,28,17,1,15,23,26,5,18,31,10,2,8,24,14,32,27,3,9,19,13,30,6,22,11,4,25];
+  const PC1= [57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,
+              63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4];
+  const PC2= [14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,
+              41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32];
+  const SH = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1];
+  const S = [
+    [14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7, 0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8,
+     4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0, 15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13],
+    [15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10, 3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5,
+     0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15, 13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9],
+    [10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8, 13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1,
+     13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7, 1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12],
+    [7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15, 13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9,
+     10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4, 3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14],
+    [2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9, 14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6,
+     4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14, 11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3],
+    [12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11, 10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8,
+     9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6, 4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13],
+    [4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1, 13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6,
+     1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2, 6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12],
+    [13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7, 1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2,
+     7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8, 2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]
+  ];
+
+  function hexBits(hex) {
+    const b = new Uint8Array(hex.length * 4);
+    for (let i = 0; i < hex.length; i++) {
+      const v = parseInt(hex[i], 16);
+      for (let j = 0; j < 4; j++) b[i * 4 + j] = (v >> (3 - j)) & 1;
+    }
+    return b;
+  }
+  function bitsHex(bits) {
+    let s = '';
+    for (let i = 0; i < bits.length; i += 4) {
+      s += ((bits[i] << 3) | (bits[i + 1] << 2) | (bits[i + 2] << 1) | bits[i + 3]).toString(16).toUpperCase();
+    }
+    return s;
+  }
+  function permute(bits, t) {
+    const o = new Uint8Array(t.length);
+    for (let i = 0; i < t.length; i++) o[i] = bits[t[i] - 1];
+    return o;
+  }
+  function rol(a, n) {
+    const o = new Uint8Array(a.length);
+    for (let i = 0; i < a.length; i++) o[i] = a[(i + n) % a.length];
+    return o;
+  }
+  function schedule(keyHex) {
+    const k = permute(hexBits(keyHex), PC1);
+    let C = k.slice(0, 28), D = k.slice(28, 56);
+    const sk = [];
+    for (let i = 0; i < 16; i++) {
+      C = rol(C, SH[i]); D = rol(D, SH[i]);
+      const cd = new Uint8Array(56); cd.set(C, 0); cd.set(D, 28);
+      sk.push(permute(cd, PC2));
+    }
+    return sk;
+  }
+  function f(R, K) {
+    const e = permute(R, E);
+    const x = new Uint8Array(48);
+    for (let i = 0; i < 48; i++) x[i] = e[i] ^ K[i];
+    const out = new Uint8Array(32);
+    for (let b = 0; b < 8; b++) {
+      const row = (x[b * 6] << 1) | x[b * 6 + 5];
+      const col = (x[b * 6 + 1] << 3) | (x[b * 6 + 2] << 2) | (x[b * 6 + 3] << 1) | x[b * 6 + 4];
+      const v = S[b][row * 16 + col];
+      for (let j = 0; j < 4; j++) out[b * 4 + j] = (v >> (3 - j)) & 1;
+    }
+    return permute(out, P);
+  }
+  /* 单 DES 块加/解密，block / key 均为 16 个 hex 字符 */
+  function block(blk, keyHex, decrypt) {
+    const sk = schedule(keyHex);
+    const bits = permute(hexBits(blk), IP);
+    let L = bits.slice(0, 32), R = bits.slice(32, 64);
+    for (let i = 0; i < 16; i++) {
+      const fv = f(R, sk[decrypt ? 15 - i : i]);
+      const nR = new Uint8Array(32);
+      for (let j = 0; j < 32; j++) nR[j] = L[j] ^ fv[j];
+      L = R; R = nR;
+    }
+    const pre = new Uint8Array(64); pre.set(R, 0); pre.set(L, 32);
+    return bitsHex(permute(pre, FP));
+  }
+  /* 8 字节数据加密，keyHex 可为 16 / 32 / 48 个 hex 字符 */
+  function encrypt8(dataHex, keyHex) {
+    const d = dataHex.toUpperCase().replace(/[^0-9A-F]/g, '');
+    const k = keyHex.toUpperCase().replace(/[^0-9A-F]/g, '');
+    if (d.length !== 16) throw new Error('数据必须为 8 字节(16 hex)：' + dataHex);
+    const k1 = k.substr(0, 16);
+    if (k.length >= 48) {                      // 3-key 3DES
+      return block(block(block(d, k1, false), k.substr(16, 16), true), k.substr(32, 16), false);
+    }
+    if (k.length >= 32) {                      // 2-key 3DES  K3 = K1
+      return block(block(block(d, k1, false), k.substr(16, 16), true), k1, false);
+    }
+    if (k.length === 16) return block(d, k1, false);   // 单 DES
+    throw new Error('密钥长度错误：' + keyHex);
+  }
+  return { block, encrypt8, schedule };
+})();
+</script>
+
+<script>
+/* ============================================================
+ *  流程定义
+ * ============================================================ */
+const FLOW = [
+  { id:'settype', name:'设置卡型',        kind:'fn',   cmd:'dc_config_card(A)',                                        optional:true },
+  { id:'card',    name:'寻卡 (TypeA)',    kind:'fn',   cmd:'dc_card_n(0)' },
+  { id:'rats',    name:'RATS 卡片复位',   kind:'fn',   cmd:'dc_pro_resetInt()' },
+  { id:'rnd',     name:'取随机数',        kind:'apdu', cmd:'0084000008' },
+  { id:'enc',     name:'3DES 加密随机数', kind:'calc', cmd:'(用认证密钥加密 Rand_A)' },
+  { id:'auth',    name:'外部认证',        kind:'apdu', cmd:'0082000008', dyn:true },
+  { id:'erase',   name:'删除所有文件',    kind:'apdu', cmd:'800E000000' },
+  { id:'keyfile', name:'创建 KEY 文件',   kind:'apdu', cmd:'80E00008073F020001F0FFFF' },
+  { id:'key00',   name:'创建密钥 标识00', kind:'apdu', cmd:'80D401001539F0F0F0FEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF' },
+  { id:'key01',   name:'创建密钥 标识01', kind:'apdu', cmd:'80D401011539F0F0F0FEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF' },
+  { id:'key08',   name:'创建密钥 标识08', kind:'apdu', cmd:'80D401081530F0F00101000102030405060708090A0B0C0D0E0F' },
+  { id:'binfile', name:'创建2K二进制文件',kind:'apdu', cmd:'80E0000207280800F0F0FFFF' },
+  { id:'verify',  name:'发卡校验',        kind:'apdu', cmd:'00A40200020002', optional:true }
+];
+
+/* 接触式大数据测试卡发卡流程（与非接触式是不同功能，独立流程） */
+const FLOW2 = [
+  { id:'c_setcpu', name:'设置卡型(大卡)', kind:'fn',      cmd:'dc_setcpu(0x0C)' },
+  { id:'c_reset1', name:'CPU卡复位',      kind:'fn',      cmd:'dc_cpureset()' },
+  { id:'c_cmd3',   name:'初始化(忽略结果)', kind:'cpuapdu', cmd:'800E000008FFFFFFFFFFFFFFFF', ignore:true },
+  { id:'c_reset2', name:'CPU卡复位',      kind:'fn',      cmd:'dc_cpureset()' },
+  { id:'c_cmd5',   name:'创建主文件/密钥', kind:'cpuapdu', cmd:'80E000000FFFFFFFFFFFFFFFFF0F001122334455' },
+  { id:'c_cmd6',   name:'创建文件',        kind:'cpuapdu', cmd:'80E00200070002000F0F0800' },
+  { id:'c_cmd7',   name:'创建文件',        kind:'cpuapdu', cmd:'80E00001023F00' }
+];
+
+let handle = null;
+let running = false;
+let stopReq = false;
+let stat = { total: 0, ok: 0, fail: 0 };
+const cmdInputs = {};
+const stCells = {};
+const rtCells = {};
+
+/* ---------- UI ---------- */
+const $ = (id) => document.getElementById(id);
+const logBox = $('log');
+
+function log(msg, cls) {
+  const d = new Date();
+  const p = (n, l) => String(n).padStart(l, '0');
+  const t = p(d.getHours(), 2) + ':' + p(d.getMinutes(), 2) + ':' + p(d.getSeconds(), 2) + '.' + p(d.getMilliseconds(), 3);
+  const span = document.createElement('span');
+  span.innerHTML = '<span class="t">[' + t + ']</span> <span class="' + (cls || 'i') + '">' +
+    String(msg).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</span>';
+  logBox.appendChild(span);
+  logBox.appendChild(document.createTextNode('\n'));
+  while (logBox.childNodes.length > 2400) logBox.removeChild(logBox.firstChild);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+function setState(txt) { $('runState').textContent = txt; }
+/* on=true 表示空闲/未连接(灰)，on=false 表示连接失败(红)，handle 有效则为绿 */
+function setDot(on) {
+  const cls = handle !== null ? 'on' : (on ? '' : 'off');
+  $('dot').className = 'dot ' + cls;
+  $('connState').textContent = handle === null ? (on ? '未连接' : '连接失败') : '已连接 (icdev=' + handle + ')';
+}
+function updateStat() {
+  $('stTotal').textContent = stat.total;
+  $('stOk').textContent = stat.ok;
+  $('stFail').textContent = stat.fail;
+}
+function setStep(id, state, ret) {
+  const c = stCells[id], r = rtCells[id];
+  if (c) { c.className = 'st ' + state; c.textContent = { idle:'·', run:'▶', ok:'√', err:'×', skip:'–' }[state] || '·'; }
+  if (r !== undefined && r !== null) rtCells[id].textContent = r;
+}
+function resetSteps(flow) {
+  (flow || FLOW).forEach(s => {
+    const off = s.optional && !isOptOn(s.id);
+    setStep(s.id, off ? 'skip' : 'idle', '');
+  });
+}
+
+/* 构建步骤表（参数化，支持非接触/接触两套流程） */
+function buildStepsFor(flow, bodyId) {
+  const body = $(bodyId);
+  flow.forEach((s, i) => {
+    const tr = document.createElement('tr');
+    if (s.optional) tr.dataset.opt = s.id;
+
+    const tdSt = document.createElement('td');
+    tdSt.className = 'st idle'; tdSt.textContent = '·';
+    stCells[s.id] = tdSt;
+
+    const tdIdx = document.createElement('td');
+    tdIdx.className = 'idx'; tdIdx.textContent = i + 1;
+
+    const tdNm = document.createElement('td');
+    tdNm.className = 'nm'; tdNm.textContent = s.name;
+
+    const tdCmd = document.createElement('td');
+    if (s.kind === 'apdu' || s.kind === 'cpuapdu') {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.value = s.cmd;
+      inp.spellcheck = false;
+      cmdInputs[s.id] = inp;
+      tdCmd.appendChild(inp);
+    } else {
+      tdCmd.innerHTML = '<span style="font-family:var(--mono);color:var(--muted);font-size:11px">' + s.cmd + '</span>';
+    }
+
+    const tdRt = document.createElement('td');
+    tdRt.className = 'rt'; tdRt.textContent = '';
+    rtCells[s.id] = tdRt;
+
+    tr.append(tdSt, tdIdx, tdNm, tdCmd, tdRt);
+    body.appendChild(tr);
+  });
+}
+buildStepsFor(FLOW, 'stepBody');
+buildStepsFor(FLOW2, 'stepBody2');
+
+function isOptOn(id) {
+  if (id === 'settype') return $('optSetCardType').checked;
+  if (id === 'verify') return $('optVerify').checked;
+  return true;
+}
+['optSetCardType', 'optVerify'].forEach(id => $(id).addEventListener('change', resetSteps));
+
+/* 串口下拉 COM1~COM32 */
+(function buildCom() {
+  const sel = $('comPort');
+  for (let i = 1; i <= 32; i++) {
+    const o = document.createElement('option');
+    o.value = String(i); o.textContent = 'COM' + i;
+    if (i === 3) o.selected = true;
+    sel.appendChild(o);
+  }
+})();
+
+/* 通讯方式切换（用 class 高亮，兼容不支持 :has 的浏览器） */
+function syncConn() {
+  const usb = document.querySelector('input[name=conn]:checked').value === 'usb';
+  $('usbCfg').style.display = usb ? '' : 'none';
+  $('serCfg').style.display = usb ? 'none' : '';
+  document.querySelectorAll('input[name=conn]').forEach(r => {
+    r.parentElement.classList.toggle('on', r.checked);
+  });
+}
+document.querySelectorAll('input[name=conn]').forEach(r => r.addEventListener('change', syncConn));
+syncConn();
+
+/* 发卡模式切换：cl=非接触式，ct=接触式 */
+function currentMode() {
+  const r = document.querySelector('input[name=mode]:checked');
+  return r ? r.value : 'cl';
+}
+function syncMode() {
+  const ct = currentMode() === 'ct';
+  $('flowCardCl').style.display = ct ? 'none' : '';
+  $('flowCardCt').style.display = ct ? '' : 'none';
+  if ($('paramCard')) $('paramCard').style.display = ct ? 'none' : '';
+  document.querySelectorAll('input[name=mode]').forEach(r => {
+    r.parentElement.classList.toggle('on', r.checked);
+  });
+  $('btnRun').textContent = ct ? '开始接触式发卡' : '开始发卡';
+}
+document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', syncMode));
+syncMode();
+
+/* ---------- 设备 ---------- */
+let scanning = false;
+let scanAbort = false;
+
+function readCfg() {
+  const usb = document.querySelector('input[name=conn]:checked').value === 'usb';
+  let port = parseInt(usb ? $('usbPort').value : $('comPort').value, 10);
+  let baud = parseInt(usb ? $('usbBaud').value : $('comBaud').value, 10);
+  /* 控件值缺失/非法时回退到安全默认，避免直接报「参数无效」而无法打开 */
+  if (!Number.isInteger(port)) port = usb ? 100 : 1;
+  if (!Number.isInteger(baud)) baud = 115200;
+  return { usb: usb, port: port, baud: baud, name: usb ? $('usbName').value.trim() : '' };
+}
+function cfgWithPort(c, port) { return { usb: c.usb, port: port, baud: c.baud, name: c.name }; }
+function descOf(c) {
+  return c.usb ? 'USB(设备号 ' + c.port + ', ' + c.baud + ')' : '串口(COM' + c.port + ', ' + c.baud + ')';
+}
+/* dc_init 成功返回 >=0 的句柄，失败返回负数；parseInt(null)=NaN 也视为失败 */
+function initOk(r) { return !!r && typeof r[0] === 'number' && isFinite(r[0]) && r[0] >= 0; }
+function initVal(r) { return r ? (r[0] === undefined ? 'undefined' : String(r[0])) : '无返回'; }
+
+function wsAlive() {
+  return (typeof ws !== 'undefined') && ws !== null && ws !== undefined && ws.readyState === 1;
+}
+/* 保证 WebSocket 已连上；已连则复用，避免 openWs 重复连接返回 false */
+async function ensureWs() {
+  if (wsAlive()) return true;
+  /* 关键：openWs 内部只要 ws 变量非 undefined 就直接返回 false。
+     若上次连接已关闭但变量残留，不先清掉就会永远连不上，必须先 closeWs 置空。 */
+  if ((typeof ws !== 'undefined') && ws) await closeWs();
+  const url = ($('wsUrl').value || '').trim() || 'ws://127.0.0.1:50150';
+  const ok = await openWs(url, 6000);
+  if (!ok) {
+    log('无法连接服务 ' + url + '。请确认 dcrf32servicetest.exe 已启动且端口未被占用。', 'e');
+    return false;
+  }
+  log('服务已连接：' + url, 'i');
+  return true;
+}
+
+async function tryInit(c) {
+  return c.name ? await dc_init_name(c.port, c.baud, c.name) : await dc_init(c.port, c.baud);
+}
+
+/* 扫描可用设备号：0~32（串口/USB），100（常见 USB 号） */
+const SCAN_LIST = (function () {
+  const a = []; for (let i = 0; i <= 32; i++) a.push(i); a.push(100); return a;
+})();
+
+async function scanPorts(baud, name) {
+  const found = [];
+  for (const p of SCAN_LIST) {
+    if (scanAbort) break;
+    const r = name ? await dc_init_name(p, baud, name) : await dc_init(p, baud);
+    if (initOk(r)) {
+      await dc_exit(r[0]);                 // 立即释放，防止句柄泄漏
+      found.push(p);
+      log('  · 设备号 ' + p + ' 可用（icdev=' + r[0] + '）', 'o');
+    }
+  }
+  return found;
+}
+
+async function openDevice(allowScan) {
+  if (handle !== null) { log('设备已打开，请先关闭。', 'w'); return false; }
+  if (scanning) { log('正在扫描设备，请稍候。', 'w'); return false; }
+
+  const c = readCfg();
+  if (!Number.isInteger(c.port) || !Number.isInteger(c.baud)) {
+    log('参数无效：设备号/串口号必须为数字。', 'e'); return false;
+  }
+  log('正在连接 ' + descOf(c) + ' ...', 'h');
+
+  if (!await ensureWs()) { setDot(false); return false; }
+
+  let used = c.port;
+  let r = await tryInit(c);
+
+  if (!initOk(r)) {
+    log('设备号 ' + c.port + ' 打开失败，返回值 ' + initVal(r), 'w');
+    if (allowScan !== false && $('optAutoScan').checked) {
+      log('开始自动扫描设备号 0~32,100 ...', 'h');
+      const found = await scanPorts(c.baud, c.name);
+      if (found.length) {
+        used = found[0];
+        log('扫描到可用设备号：' + found.join(', ') + '，改用 ' + used, 'o');
+        if (c.usb) $('usbPort').value = used; else $('comPort').value = used;
+        r = await tryInit(cfgWithPort(c, used));
+      } else {
+        log('未扫描到任何可用设备号。', 'e');
+      }
+    }
+  }
+
+  if (!initOk(r)) {
+    log('打开设备失败。请检查：① 读卡器已插好并通电 ② dcrf32 服务已启动 ③ 波特率与设备一致', 'e');
+    await closeWs(); setDot(false); return false;
+  }
+
+  handle = r[0];
+  log('打开设备成功，icdev = ' + handle + '  ' + descOf(cfgWithPort(c, used)), 'o');
+  const v = await dc_getver(handle);
+  if (v && v[0] === 0) log('设备版本号：' + v[1], 'i');
+  setDot(true);
+  return true;
+}
+
+async function doScan() {
+  if (scanning) return;
+  const c = readCfg();
+  if (!await ensureWs()) { setDot(false); return; }
+  scanning = true; scanAbort = false;
+  ['btnScan', 'btnScanUsb', 'btnScanCom', 'btnOpen'].forEach(id => { $(id).disabled = true; });
+  log('扫描设备号 0~32,100（波特率 ' + c.baud + '）...', 'h');
+  try {
+    const found = await scanPorts(c.baud, c.name);
+    if (found.length) {
+      log('扫描完成，可用设备号：' + found.join(', '), 'o');
+      let pick = found[0];
+      if (!c.usb) { const s = found.filter(p => p >= 1 && p <= 32); if (s.length) pick = s[0]; }
+      if (c.usb) $('usbPort').value = pick; else $('comPort').value = pick;
+      log('已填入设备号 ' + pick + '，点「打开端口」即可连接。', 'i');
+    } else {
+      log('扫描完成，未找到可用设备。请检查读卡器连接与 dcrf32 服务。', 'e');
+    }
+  } finally {
+    scanning = false;
+    ['btnScan', 'btnScanUsb', 'btnScanCom', 'btnOpen'].forEach(id => { $(id).disabled = false; });
+  }
+}
+
+async function closeDevice() {
+  if (handle === null) return;
+  const r = await dc_exit(handle);
+  log('关闭设备，返回值：' + (r ? r[0] : 'undefined'), r && r[0] === 0 ? 'o' : 'w');
+  handle = null;
+  await closeWs();
+  setDot(false);
+}
+
+$('btnOpen').addEventListener('click', async () => {
+  $('btnOpen').disabled = true;
+  try { await openDevice(true); } finally { $('btnOpen').disabled = false; }
+});
+$('btnClose').addEventListener('click', closeDevice);
+$('btnScan').addEventListener('click', doScan);
+$('btnScanUsb').addEventListener('click', doScan);
+$('btnScanCom').addEventListener('click', doScan);
+$('btnBeep').addEventListener('click', async () => {
+  if (handle === null) { log('请先打开端口。', 'w'); return; }
+  await dc_beep(handle, 100);
+});
+
+/* ---------- 工具 ---------- */
+/* 注意：不可命名为 sleep —— dcrf32_client.js 顶层已有 async function sleep，
+   同名 const/let 声明会让浏览器在解析阶段抛 "Identifier 'sleep' has already been
+   declared"，导致整个 <script> 块一行都不执行（按钮全部失灵）。 */
+const delayMs = (ms) => new Promise(r => setTimeout(r, ms));
+
+function cleanHex(s) { return String(s || '').replace(/\s/g, '').toUpperCase(); }
+function isHex(s) { return /^[0-9A-F]+$/.test(s) && s.length % 2 === 0; }
+
+async function apdu(hex, timeout) {
+  const cmd = cleanHex(hex);
+  if (cmd.length % 2 !== 0) throw new Error('APDU 长度非偶数：' + cmd);
+  /* 实测：slen 必须传【字节数】，传 HEX 字符数会返回 SW=6700 */
+  const r = await dc_pro_commandlinkInt(handle, cmd.length / 2, cmd, timeout || 10);
+  if (!r || r[0] !== 0) {
+    throw new Error('APDU 通信失败 rc=' + (r ? r[0] : 'undefined') + '  cmd=' + cmd);
+  }
+  return cleanHex(r[2]);
+}
+
+function swOf(resp) { return resp.length >= 4 ? resp.substr(resp.length - 4) : ''; }
+
+async function beep(ms) { if ($('optBeep').checked && handle !== null) { try { await dc_beep(handle, ms || 60); } catch (e) {} } }
+
+/* 等待卡片：present=true 等放卡，false 等取卡 */
+async function waitCard(present, timeoutMs) {
+  const t0 = Date.now();
+  while (!stopReq) {
+    const r = await dc_card_n(handle, 0);
+    const has = r && r[0] === 0;
+    if (has === present) return r;
+    if (timeoutMs && Date.now() - t0 > timeoutMs) return null;
+    await delayMs(250);
+  }
+  return null;
+}
+
+/* ---------- 单张发卡 ---------- */
+async function issueOne() {
+  resetSteps();
+  let randA = '', encA = '', cardSnr = '';
+
+  for (const s of FLOW) {
+    if (s.optional && !isOptOn(s.id)) { setStep(s.id, 'skip', ''); continue; }
+    setStep(s.id, 'run', '');
+    try {
+      if (s.id === 'settype') {
+        const r = await dc_config_card(handle, 'A'.charCodeAt(0));
+        if (!r || r[0] !== 0) throw new Error('设置卡型失败 rc=' + (r ? r[0] : 'undefined'));
+        setStep(s.id, 'ok', 'rc=0');
+
+      } else if (s.id === 'card') {
+        const r = await dc_card_n(handle, 0);
+        if (!r) throw new Error('寻卡无返回');
+        if (r[0] === 1) throw new Error('未检测到卡片');
+        if (r[0] !== 0) throw new Error('寻卡失败 rc=' + r[0]);
+        cardSnr = cleanHex(r[2]);
+        log('寻卡成功，卡号：' + cardSnr, 'i');
+        setStep(s.id, 'ok', cardSnr);
+
+      } else if (s.id === 'rats') {
+        const r = await dc_pro_resetInt(handle);
+        if (!r || r[0] !== 0) throw new Error('RATS 复位失败 rc=' + (r ? r[0] : 'undefined'));
+        log('RATS 复位成功，ATS：' + cleanHex(r[2]), 'i');
+        setStep(s.id, 'ok', cleanHex(r[2]));
+
+      } else if (s.id === 'rnd') {
+        const cmd = cleanHex(cmdInputs[s.id].value);
+        const resp = await apdu(cmd);
+        const sw = swOf(resp);
+        if (sw !== '9000') throw new Error('取随机数失败 SW=' + sw);
+        randA = resp.substr(0, resp.length - 4);
+        if (randA.length !== 16) throw new Error('随机数长度异常：' + randA);
+        log('Rand_A = ' + randA + '  SW=9000', 'i');
+        setStep(s.id, 'ok', randA);
+
+      } else if (s.id === 'enc') {
+        const key = cleanHex($('authKey').value);
+        const alg = $('alg').value;
+        if (!isHex(key)) throw new Error('认证密钥不是合法 HEX：' + key);
+        if (alg === 'des') encA = DES.block(randA, key.substr(0, 16), false);
+        else if (alg === '3des24') {
+          if (key.length !== 48) throw new Error('3DES(24字节) 需要 48 位 HEX 密钥，当前 ' + key.length);
+          encA = DES.encrypt8(randA, key);
+        } else {
+          if (key.length !== 32) throw new Error('3DES(16字节) 需要 32 位 HEX 密钥，当前 ' + key.length);
+          encA = DES.encrypt8(randA, key);
+        }
+        log('EnData_A = ' + encA + '  (密钥 ' + key + ')', 'i');
+        setStep(s.id, 'ok', encA);
+
+      } else if (s.id === 'auth') {
+        const kid = cleanHex($('keyId').value).padStart(2, '0').substr(-2);
+        const prefix = cleanHex(cmdInputs[s.id].value);          // 0082000008 -> CLA INS P1 | P2 | Lc
+        const cmd = prefix.substr(0, 6) + kid + prefix.substr(8) + encA;
+        const resp = await apdu(cmd);
+        const sw = swOf(resp);
+        if (sw !== '9000') {
+          let extra = '';
+          const mm = /^63C([0-9A-F])$/.exec(sw);
+          if (mm) extra = '，剩余重试次数 ' + mm[1] + '（次数用尽卡片将永久锁死，请立即核对密钥）';
+          else if (sw === '6983') extra = '，密钥已被锁死';
+          else if (sw === '6A86' || sw === '6A88') extra = '，P1/P2 或密钥标识不正确，请检查「密钥标识」';
+          else if (sw === '6700') extra = '，指令长度错误（Lc 与实际数据长度不符）';
+          throw new Error('外部认证失败 SW=' + sw + extra + '  cmd=' + cmd);
+        }
+        log('外部认证成功 SW=9000  cmd=' + cmd, 'o');
+        setStep(s.id, 'ok', '9000');
+
+      } else if (s.id === 'verify') {
+        let cmd = cleanHex(cmdInputs[s.id].value);
+        let resp = await apdu(cmd);
+        if (swOf(resp) !== '9000') throw new Error('选择文件 0002 失败 SW=' + swOf(resp));
+        resp = await apdu('00B0000010');
+        if (swOf(resp) !== '9000') throw new Error('读文件失败 SW=' + swOf(resp));
+        log('校验读取文件 0002 前16字节：' + resp, 'o');
+        setStep(s.id, 'ok', resp);
+
+      } else {
+        const cmd = cleanHex(cmdInputs[s.id].value);
+        if (!isHex(cmd)) throw new Error('指令不是合法 HEX：' + cmd);
+        const resp = await apdu(cmd);
+        const sw = swOf(resp);
+        if (sw !== '9000') throw new Error('步骤「' + s.name + '」失败 SW=' + sw + '  cmd=' + cmd);
+        log(s.name + ' 成功  cmd=' + cmd + '  SW=9000', 'i');
+        setStep(s.id, 'ok', resp.length > 4 ? resp : '9000');
+      }
+    } catch (e) {
+      setStep(s.id, 'err', String(e.message || e).slice(0, 60));
+      log('步骤「' + s.name + '」中断：' + (e.message || e), 'e');
+      throw e;
+    }
+  }
+  return cardSnr;
+}
+
+/* ---------- 主循环 ---------- */
+async function runIssue() {
+  if (handle === null) {
+    log('请先打开端口。', 'w');
+    if (!await openDevice()) return;
+  }
+  if (running) return;
+  running = true; stopReq = false;
+  $('btnRun').disabled = true; $('btnStop').disabled = false;
+  $('btnOpen').disabled = true; $('btnClose').disabled = true;
+
+  const loop = $('optLoop').checked;
+  try {
+    do {
+      stat.total++; updateStat();
+      resetSteps();
+      setState('发卡中…');
+      try {
+        const snr = await issueOne();
+        stat.ok++;
+        log('★ 发卡成功  卡号 ' + (snr || '-') + '  （第 ' + stat.ok + ' 张）', 'o');
+        $('lastCard').textContent = '最近成功：' + (snr || '-');
+        await beep(80);
+      } catch (e) {
+        stat.fail++;
+        log('✗ 发卡失败：' + (e.message || e), 'e');
+        await beep(400);
+      }
+      updateStat();
+
+      if (!loop || stopReq) break;
+      setState('请取走卡片…');
+      log('等待卡片取走…', 'w');
+      await waitCard(false);
+      if (stopReq) break;
+      setState('请放置下一张卡…');
+      log('等待下一张卡片…', 'w');
+      await waitCard(true);
+      if (stopReq) break;
+      log('------------------------------', 'i');
+    } while (loop && !stopReq);
+  } finally {
+    running = false; stopReq = false;
+    $('btnRun').disabled = false; $('btnStop').disabled = true;
+    $('btnOpen').disabled = false; $('btnClose').disabled = false;
+    setState(loop ? '循环已停止' : '空闲');
+  }
+}
+
+/* ---------- 接触式大数据测试卡发卡 ---------- */
+/* dc_cpuapdu 即库里的 dc_cpuapduInt(icdev, slen, sendbuffer)。
+   返回的 result[2] 为完整响应（含 2 字节 SW），slen 传【字节数】。 */
+async function cpuApdu(hex) {
+  const cmd = cleanHex(hex);
+  if (cmd.length % 2 !== 0) throw new Error('命令长度非偶数：' + cmd);
+  const slen = cmd.length / 2;
+  const r = await dc_cpuapduInt(handle, slen, cmd);
+  if (!r || r[0] !== 0) throw new Error('CPU APDU 通信失败 rc=' + (r ? r[0] : 'undefined') + '  cmd=' + cmd);
+  return cleanHex(r[2]);
+}
+
+async function issueOneContact() {
+  for (const s of FLOW2) {
+    if (stopReq) { log('已取消。', 'w'); return; }
+    setStep(s.id, 'run', '');
+    try {
+      if (s.id === 'c_setcpu') {
+        const r = await dc_setcpu(handle, 0x0C);          // 0x0C = 操作大卡
+        if (!r || r[0] !== 0) throw new Error('设置卡型失败 rc=' + (r ? r[0] : 'undefined'));
+        log('设置卡型(大卡)成功 rc=0', 'i');
+        setStep(s.id, 'ok', 'rc=0');
+
+      } else if (s.id === 'c_reset1' || s.id === 'c_reset2') {
+        const r = await dc_cpureset(handle);
+        if (!r || r[0] !== 0) throw new Error('CPU 卡复位失败 rc=' + (r ? r[0] : 'undefined'));
+        log('CPU 复位成功 ATS=' + cleanHex(r[2]), 'i');
+        setStep(s.id, 'ok', cleanHex(r[2]));
+
+      } else if (s.kind === 'cpuapdu') {
+        const cmd = cleanHex(cmdInputs[s.id].value);
+        const resp = await cpuApdu(cmd);
+        const sw = swOf(resp);
+        setStep(s.id, 'ok', resp);
+        if (s.ignore) {
+          /* 步骤3：即使失败或没返回 9000 也继续往下执行 */
+          log('命令「' + s.name + '」完成 返回=' + resp + '（SW=' + sw + '，按流程忽略结果继续）', 'i');
+        } else {
+          if (sw !== '9000') throw new Error('命令「' + s.name + '」失败 SW=' + sw + '  cmd=' + cmd);
+          log('命令「' + s.name + '」成功 SW=9000  cmd=' + cmd, 'o');
+        }
+      }
+    } catch (e) {
+      setStep(s.id, 'err', String(e.message || e).slice(0, 60));
+      log('步骤「' + s.name + '」失败：' + (e.message || e), 'e');
+      throw e;
+    }
+  }
+}
+
+async function runIssueContact() {
+  if (handle === null) { log('请先打开端口。', 'w'); if (!await openDevice()) return; }
+  if (running) return;
+  running = true; stopReq = false;
+  $('btnRun').disabled = true; $('btnStop').disabled = false;
+  $('btnOpen').disabled = true; $('btnClose').disabled = true;
+  try {
+    stat.total++; updateStat();
+    resetSteps(FLOW2);
+    setState('接触式发卡中…');
+    try {
+      await issueOneContact();
+      stat.ok++;
+      log('★ 接触式发卡成功（第 ' + stat.ok + ' 张）', 'o');
+      await beep(80);
+    } catch (e) {
+      stat.fail++;
+      log('✗ 接触式发卡失败：' + (e.message || e), 'e');
+      await beep(400);
+    }
+    updateStat();
+  } finally {
+    running = false; stopReq = false;
+    $('btnRun').disabled = false; $('btnStop').disabled = true;
+    $('btnOpen').disabled = false; $('btnClose').disabled = false;
+    setState('空闲');
+  }
+}
+
+$('btnRun').addEventListener('click', () => {
+  if (currentMode() === 'ct') runIssueContact(); else runIssue();
+});
+$('btnStop').addEventListener('click', () => { stopReq = true; setState('正在停止…'); log('收到停止请求，当前步骤结束后停止。', 'w'); });
+$('btnClearLog').addEventListener('click', () => { logBox.innerHTML = ''; });
+$('btnSaveLog').addEventListener('click', () => {
+  const blob = new Blob([logBox.innerText], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  a.download = '发卡日志_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+/* 参数变更时同步认证指令显示 */
+$('keyId').addEventListener('change', () => {
+  const kid = cleanHex($('keyId').value).padStart(2, '0').substr(-2);
+  const cur = cleanHex(cmdInputs['auth'].value);
+  if (cur.length >= 8) cmdInputs['auth'].value = cur.substr(0, 6) + kid + cur.substr(8);
+});
+
+/* 启动自检 */
+(function selfTest() {
+  try {
+    const a = DES.block('0123456789ABCDEF', '133457799BBCDFF1', false);
+    const b = DES.block('0000000000000000', '0000000000000000', false);
+    const c = DES.block('FFFFFFFFFFFFFFFF', 'FFFFFFFFFFFFFFFF', false);
+    const okA = a === '85E813540F0AB405', okB = b === '8CA64DE9C1B123A7', okC = c === '7359B2163E4EDC58';
+    log('DES 自检：' + (okA && okB && okC ? '通过' : '失败') +
+        '  [0123456789ABCDEF/133457799BBCDFF1]=' + a +
+        '  [0/0]=' + b + '  [F/F]=' + c, okA && okB && okC ? 'o' : 'e');
+  } catch (e) { log('DES 自检异常：' + e.message, 'e'); }
+  log('就绪。选择通讯方式 → 打开端口 → 放卡 → 开始发卡。', 'h');
+  setDot(true);
+  updateStat();
+
+  /* 启动时探测 dcrf32 服务，提前暴露"服务未启动"这类问题 */
+  (async () => {
+    const url = ($('wsUrl').value || '').trim() || 'ws://127.0.0.1:50150';
+    const ok = await openWs(url, 3000);
+    if (ok) log('dcrf32 服务已连接：' + url, 'o');
+    else log('未检测到 dcrf32 服务（' + url + '）。请先启动 dcrf32servicetest.exe，再点「打开端口」。', 'w');
+    setDot(true);
+  })();
+})();
+</script>
+</body>
+</html>
